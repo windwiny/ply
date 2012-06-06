@@ -3104,6 +3104,16 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
     else:
         pdict = get_caller_module_dict(2)
 
+    try:
+        fr = sys._getframe()
+        outputdir1, pre_n = os.path.split(fr.f_back.f_code.co_filename)
+        if not outputdir: outputdir = outputdir1
+        pre_n = os.path.splitext(pre_n)[0].replace('.', '')
+        tabmodule = '%s_%s' % (pre_n, tabmodule)
+        debugfile = '%s_%s' % (pre_n, debugfile)
+    except:
+        pass
+
     # Collect parser information from the dictionary
     pinfo = ParserReflect(pdict,log=errorlog)
     pinfo.get_all()
@@ -3118,9 +3128,14 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
     try:
         lr = LRTable()
         if picklefile:
-            read_signature = lr.read_pickle(picklefile)
+            read_signature = lr.read_pickle(os.path.join(outputdir, picklefile))
         else:
-            read_signature = lr.read_table(tabmodule)
+            odir = os.getcwd()
+            try:
+                if outputdir: os.chdir(outputdir)
+                read_signature = lr.read_table(tabmodule)
+            finally:
+                os.chdir(odir)
         if optimize or (read_signature == signature):
             try:
                 lr.bind_callables(pinfo.pdict)
@@ -3138,7 +3153,7 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
 
     if debuglog is None:
         if debug:
-            debuglog = PlyLogger(open(debugfile,"w"))
+            debuglog = PlyLogger(open(os.path.join(outputdir, debugfile),"w"))
         else:
             debuglog = NullLogger()
 
@@ -3316,7 +3331,7 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
 
     # Write a pickled version of the tables
     if picklefile:
-        lr.pickle_table(picklefile,signature)
+        lr.pickle_table(os.path.join(outputdir, picklefile),signature)
 
     # Build the parser
     lr.bind_callables(pinfo.pdict)
