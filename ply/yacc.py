@@ -3107,7 +3107,8 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
     try:
         fr = sys._getframe()
         outputdir1, pre_n = os.path.split(fr.f_back.f_code.co_filename)
-        if not outputdir: outputdir = outputdir1
+        if not outputdir or not os.path.isdir(outputdir):
+            outputdir = outputdir1
         pre_n = os.path.splitext(pre_n)[0].replace('.', '')
         tabmodule = '%s_%s' % (pre_n, tabmodule)
         debugfile = '%s_%s' % (pre_n, debugfile)
@@ -3132,10 +3133,14 @@ def yacc(method='LALR', debug=yaccdebug, module=None, tabmodule=tab_module, star
         else:
             odir = os.getcwd()
             try:
-                if outputdir: os.chdir(outputdir)
+                if outputdir:
+                    os.chdir(outputdir)
+                    sys.path.insert(0, outputdir)
                 read_signature = lr.read_table(tabmodule)
             finally:
                 os.chdir(odir)
+                if outputdir:
+                    sys.path.pop(0)
         if optimize or (read_signature == signature):
             try:
                 lr.bind_callables(pinfo.pdict)
